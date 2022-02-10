@@ -12,8 +12,10 @@ file(GLOB sources ${PROJECT_SOURCE_DIR}/*.cc)
 file(GLOB headers ${PROJECT_SOURCE_DIR}/*.hh)
 
 file(GLOB MACROS "*.mac")
+file(GLOB EXT_DATA "*.csv")
 
 file(COPY ${MACROS} DESTINATION ${PROJECT_BINARY_DIR})
+file(COPY ${EXT_DATA} DESTINATION ${PROJECT_BINARY_DIR})
 
 add_executable(ddopt sim.cc ${sources} ${headers})
 target_link_libraries(ddopt ${Geant4_LIBRARIES})
