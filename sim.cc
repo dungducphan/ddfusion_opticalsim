@@ -31,6 +31,8 @@ int main(int argc,char** argv) {
 
   runManager->SetUserInitialization(new actionInit());
 
+  runManager->Initialize();
+
   G4VisManager* visManager = new G4VisExecutive;
   visManager->Initialize();
 
@@ -41,7 +43,7 @@ int main(int argc,char** argv) {
     G4String fileName = argv[1];
     UImanager->ApplyCommand(command+fileName);
   } else {
-    UImanager->ApplyCommand("/control/execute init_vis.mac");
+    UImanager->ApplyCommand("/control/execute vis.mac");
     ui->SessionStart();
     delete ui;
   }

@@ -30,7 +30,7 @@ G4VPhysicalVolume* detConstruction::Construct() {
   // World
   G4double world_sizeXY = 0.3*m;
   G4double world_sizeZ  = 5*m;
-  G4Material* worldMat = nist->FindOrBuildMaterial("G4_AIR");
+  G4Material* worldMat = nist->FindOrBuildMaterial("G4_Galactic");
 
   G4Box* solidWorld = new G4Box("solidWorld", 0.5*world_sizeXY, 0.5*world_sizeXY, 0.5*world_sizeZ);
   G4LogicalVolume* logicWorld = new G4LogicalVolume(solidWorld, worldMat, "logicWorld");
