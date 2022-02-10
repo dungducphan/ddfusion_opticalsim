@@ -1,5 +1,8 @@
 #pragma once
 
+#include <utility>
+#include <tuple>
+
 #include "G4VUserDetectorConstruction.hh"
 #include "globals.hh"
 
@@ -17,6 +20,6 @@ class detConstruction : public G4VUserDetectorConstruction {
     virtual G4VPhysicalVolume* Construct();
     // virtual void ConstructSDandField();
 
-    // void FillScintillatorFromFile(std::string spectrumFile);
-    // void GetPMTQEFromFile(std::string qeFile);
+    std::tuple<std::vector<double>, std::vector<double>, std::vector<double>> GetScintillatorOpticalProps(std::string spectrumFile);
+    std::pair<std::vector<double>, std::vector<double>> GetPMTQuantumEfficiencyFromFile(std::string qeFile);
 };

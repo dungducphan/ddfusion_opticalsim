@@ -51,8 +51,18 @@ G4VPhysicalVolume* detConstruction::Construct() {
 
   G4Tubs* solidEJ200 = new G4Tubs("solidEJ200", 0, 2.51*cm, EJ200HalfThickness * cm, 0, 2*TMath::Pi());
   G4LogicalVolume* logicEJ200 = new G4LogicalVolume(solidEJ200, ej200Mat, "logicEJ200");
-  // G4VPhysicalVolume* physEJ200 =
-  new G4PVPlacement(0, G4ThreeVector(0,0, (EJ200PosZ / 2.) * m), logicEJ200, "physEJ200", logicWorld, false, 0, checkOverlaps);
+  G4VPhysicalVolume* physEJ200 = new G4PVPlacement(0, G4ThreeVector(0,0, (EJ200PosZ / 2.) * m), logicEJ200, "physEJ200", logicWorld, false, 0, checkOverlaps);
+
+  auto ScintOpSpec = GetScintillatorOpticalProps("EJ200-EmissionSpec.csv");
+  G4MaterialPropertiesTable* MPT_EJ200 = new G4MaterialPropertiesTable();
+  MPT_EJ200->AddProperty("RINDEX", std::get<0>(ScintOpSpec), std::get<2>(ScintOpSpec), std::get<0>(ScintOpSpec).size())->GetSpline();
+  MPT_EJ200->AddProperty("SCINTILLATIONCOMPONENT1", std::get<0>(ScintOpSpec), std::get<1>(ScintOpSpec), std::get<0>(ScintOpSpec).size())->GetSpline();
+  MPT_EJ200->AddConstProperty("SCINTILLATIONYIELD", 10000. / MeV);
+  MPT_EJ200->AddConstProperty("RESOLUTIONSCALE", 1.0);
+  MPT_EJ200->AddConstProperty("SCINTILLATIONTIMECONSTANT1", 2.1 * ns);
+  MPT_EJ200->AddConstProperty("SCINTILLATIONRISETIME1", 0.9 * ns);
+  MPT_EJ200->AddConstProperty("SCINTILLATIONYIELD1", 1.0);
+  ej200Mat->SetMaterialPropertiesTable(MPT_EJ200);
 
   // XP2020 
   G4Element* elK = nist->FindOrBuildElement("K");
@@ -65,30 +75,16 @@ G4VPhysicalVolume* detConstruction::Construct() {
   
   G4Tubs* solidXP2020 = new G4Tubs("solidXP2020", 0, 2.51*cm, XP2020HalfThickness * mm, 0, 2*TMath::Pi());
   G4LogicalVolume* logicXP2020 = new G4LogicalVolume(solidXP2020, biAlkaliMat, "logicXP2020");
-  // G4PVPlacement* physXP2020 =
-  new G4PVPlacement(0, G4ThreeVector(0,0, XP2020PosZNoOffset), logicXP2020, "physXP2020", logicWorld, false, 0, checkOverlaps);
+  G4PVPlacement* physXP2020 = new G4PVPlacement(0, G4ThreeVector(0,0, XP2020PosZNoOffset), logicXP2020, "physXP2020", logicWorld, false, 0, checkOverlaps);
 
 /*
   // FIXME: keep only for sanity check. Turn off in production mode.
   // G4MaterialPropertiesTable* MPT_Air = new G4MaterialPropertiesTable();
   // MPT_Air->AddProperty("RINDEX", photonEnergy, refractiveIndex_Air, 4)->GetSpline();
   // worldMat->SetMaterialPropertiesTable(MPT_Air);
-
-    G4double photonEnergy[4] = {0.001*eV, 1*eV, 10*eV, 100*eV};
-    G4double refractiveIndex_EJ200[4] = {1.58, 1.58, 1.58, 1.58};
-    G4double refractiveIndex_Air[4] = {1.0, 1.0, 1.0, 1.0};
-    G4double reflectivity_Air_EJ200[4] = {1.0, 1.0, 1.0, 1.0};
-
-    FillScintillatorFromFile("EJ200-EmissionSpec.csv");
-    G4MaterialPropertiesTable* MPT_EJ200 = new G4MaterialPropertiesTable();
-    MPT_EJ200->AddProperty("RINDEX", photonEnergy, refractiveIndex_EJ200, 4)->GetSpline();
-    MPT_EJ200->AddProperty("SCINTILLATIONCOMPONENT1", fPhotonEnergy_EJ200, fScintillatingAmplitude_EJ200)->GetSpline();
-    MPT_EJ200->AddConstProperty("SCINTILLATIONYIELD", 10000. / MeV);
-    MPT_EJ200->AddConstProperty("RESOLUTIONSCALE", 1.0);
-    MPT_EJ200->AddConstProperty("SCINTILLATIONTIMECONSTANT1", 2.1 * ns);
-    MPT_EJ200->AddConstProperty("SCINTILLATIONRISETIME1", 0.9 * ns);
-    MPT_EJ200->AddConstProperty("SCINTILLATIONYIELD1", 1.0);
-    ej200->SetMaterialPropertiesTable(MPT_EJ200);
+  
+  // G4double refractiveIndex_Air[4] = {1.0, 1.0, 1.0, 1.0};
+  // G4double reflectivity_Air_EJ200[4] = {1.0, 1.0, 1.0, 1.0};
 
     // Surface Properties of EJ200 and Air
     // Todo: need to make the reflection inside the scintillator container more realistic
@@ -124,13 +120,6 @@ G4VPhysicalVolume* detConstruction::Construct() {
     opSurf_Air_XP2020->SetModel(unified);
     opSurf_Air_XP2020->SetMaterialPropertiesTable(MPT_XP2020);
 
-
-    //
-    // EJ-200
-    //
-
-
-
     // Surface properties applied
 
     // new G4LogicalBorderSurface("Air_EJ200", physEJ200, physWorld, opSurf_Air_EJ200);
@@ -141,25 +130,38 @@ G4VPhysicalVolume* detConstruction::Construct() {
 
   return physWorld;
 }
+
+std::tuple<std::vector<double>, std::vector<double>, std::vector<double>> detConstruction::GetScintillatorOpticalProps(std::string spectrumFile) {
+  std::vector<double> PhotonEnergy;
+  std::vector<double> RelScintillatingAmplitude;
+  std::vector<double> RefractionIndex;
+
+  auto df_ej200_emission_Spectrum = ROOT::RDF::MakeCsvDataFrame(spectrumFile.c_str());
+  auto gr = df_ej200_emission_Spectrum.Graph("Wavelength_nm", "RelYieldAmp");
+  for (int i = 0; i < gr->GetN(); ++i) {
+    PhotonEnergy.push_back(1239.84193 * eV / gr->GetPointX(i));
+    RelScintillatingAmplitude.push_back(gr->GetPointY(i));
+    RefractionIndex.push_back(1.58);
+  }
+
+  return std::make_tuple(PhotonEnergy, RelScintillatingAmplitude, RefractionIndex);
+}
+
+std::pair<std::vector<double>, std::vector<double>> detConstruction::GetPMTQuantumEfficiencyFromFile(std::string qeFile) {
+  std::vector<double> PhotonEnergy;
+  std::vector<double> QuantumEfficiency;
+
+  auto df = ROOT::RDF::MakeCsvDataFrame(qeFile.c_str());
+  auto gr = df.Graph("Wavelength_nm", "QE");
+  for (int i = 0; i < gr->GetN(); ++i) {
+    PhotonEnergy.push_back(1239.84193 * eV / gr->GetPointX(i));
+    QuantumEfficiency.push_back(gr->GetPointY(i));
+  }
+
+  return std::make_pair(PhotonEnergy, QuantumEfficiency);
+}
+
 /*
-void detConstruction::FillScintillatorFromFile(std::string spectrumFile) {
-    auto df_ej200_emission_Spectrum = ROOT::RDF::MakeCsvDataFrame(spectrumFile.c_str());
-    auto gr = df_ej200_emission_Spectrum.Graph("Wavelength_nm", "RelYieldAmp");
-    for (int i = 0; i < gr->GetN(); ++i) {
-        fPhotonEnergy_EJ200.push_back(1239.84193 * eV / gr->GetPointX(i));
-        fScintillatingAmplitude_EJ200.push_back(gr->GetPointY(i));
-    }
-}
-
-void detConstruction::GetPMTQuantumQEFromFile(std::string qeFile) {
-    auto df = ROOT::RDF::MakeCsvDataFrame(qeFile.c_str());
-    auto gr = df.Graph("Wavelength_nm", "QE");
-    for (int i = 0; i < gr->GetN(); ++i) {
-        fPhotonEnergy_XP2020.push_back(1239.84193 * eV / gr->GetPointX(i));
-        fQE_XP2020.push_back(gr->GetPointY(i));
-    }
-}
-
 void detConstruction::ConstructSDandField() {
     // Sensitive Detector
     G4String sdName = "B1/PMT";
