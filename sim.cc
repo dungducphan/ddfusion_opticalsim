@@ -3,7 +3,6 @@
 #include "actionInit.hh"
 
 #include "QGSP_BERT_HP.hh"
-#include "G4EmStandardPhysics.hh"
 #include "G4OpticalPhysics.hh"
 #include "G4RunManagerFactory.hh"
 #include "G4SteppingVerbose.hh"
@@ -11,7 +10,6 @@
 #include "QBBC.hh"
 #include "G4VisExecutive.hh"
 #include "G4UIExecutive.hh"
-#include "Randomize.hh"
 
 int main(int argc,char** argv) {
   G4UIExecutive* ui = nullptr;
@@ -22,10 +20,11 @@ int main(int argc,char** argv) {
 
   auto* runManager = G4RunManagerFactory::CreateRunManager(G4RunManagerType::Default, 1);
 
-  runManager->SetUserInitialization(new detConstruction());
+  auto detModel = new detConstruction();
+  detModel->SetOpticalDiagnostic(true);
+  runManager->SetUserInitialization(detModel);
   
   G4VModularPhysicsList* physicsList = new QGSP_BERT_HP();
-  physicsList->RegisterPhysics(new G4EmStandardPhysics());
   physicsList->RegisterPhysics(new G4OpticalPhysics());
   runManager->SetUserInitialization(physicsList);
 

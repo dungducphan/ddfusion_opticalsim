@@ -1,23 +1,7 @@
 #include "detConstruction.hh"
 #include "sensitiveDet.hh"
 
-#include "G4RunManager.hh"
-#include "G4NistManager.hh"
-#include "G4Box.hh"
-#include "G4Cons.hh"
-#include "G4Orb.hh"
-#include "G4Sphere.hh"
-#include "G4Tubs.hh"
-#include "G4Trd.hh"
-#include "G4LogicalVolume.hh"
-#include "G4PVPlacement.hh"
-#include "G4SystemOfUnits.hh"
-#include "G4OpticalSurface.hh"
-#include "G4LogicalBorderSurface.hh"
-#include "G4LogicalSkinSurface.hh"
-#include "G4SDManager.hh"
-
-detConstruction::detConstruction() : G4VUserDetectorConstruction() {}
+detConstruction::detConstruction() : G4VUserDetectorConstruction(), mOpticalDiagnosticsFlag(false) {}
 
 detConstruction::~detConstruction() {}
 
@@ -36,7 +20,7 @@ G4VPhysicalVolume* detConstruction::Construct() {
   G4LogicalVolume* logicWorld = new G4LogicalVolume(solidWorld, worldMat, "logicWorld");
   G4VPhysicalVolume* physWorld = new G4PVPlacement(0, G4ThreeVector(), logicWorld, "World_PV", 0, false, 0, checkOverlaps);        
 
-  // Geometry Parameters
+  // Detector Geometry Parameters
   G4double EJ200HalfThickness = 1;
   G4double XP2020HalfThickness = 0.1;
   G4double EJ200PosZ = 4.5;
@@ -48,21 +32,19 @@ G4VPhysicalVolume* detConstruction::Construct() {
   G4Material* ej200Mat = new G4Material("EJ200Mat", 1.0221 * g/cm3, 2);
   ej200Mat->AddElement(elH, 0.084838648);
   ej200Mat->AddElement(elC, 0.915161352);
+  ej200Mat->SetMaterialPropertiesTable(GetScintillatorBulkProps());
 
   G4Tubs* solidEJ200 = new G4Tubs("solidEJ200", 0, 2.51*cm, EJ200HalfThickness * cm, 0, 2*TMath::Pi());
   G4LogicalVolume* logicEJ200 = new G4LogicalVolume(solidEJ200, ej200Mat, "logicEJ200");
   G4VPhysicalVolume* physEJ200 = new G4PVPlacement(0, G4ThreeVector(0,0, (EJ200PosZ / 2.) * m), logicEJ200, "physEJ200", logicWorld, false, 0, checkOverlaps);
 
-  auto ScintOpSpec = GetScintillatorOpticalProps("EJ200-EmissionSpec.csv");
-  G4MaterialPropertiesTable* MPT_EJ200 = new G4MaterialPropertiesTable();
-  MPT_EJ200->AddProperty("RINDEX", std::get<0>(ScintOpSpec), std::get<2>(ScintOpSpec), std::get<0>(ScintOpSpec).size())->GetSpline();
-  MPT_EJ200->AddProperty("SCINTILLATIONCOMPONENT1", std::get<0>(ScintOpSpec), std::get<1>(ScintOpSpec), std::get<0>(ScintOpSpec).size())->GetSpline();
-  MPT_EJ200->AddConstProperty("SCINTILLATIONYIELD", 10000. / MeV);
-  MPT_EJ200->AddConstProperty("RESOLUTIONSCALE", 1.0);
-  MPT_EJ200->AddConstProperty("SCINTILLATIONTIMECONSTANT1", 2.1 * ns);
-  MPT_EJ200->AddConstProperty("SCINTILLATIONRISETIME1", 0.9 * ns);
-  MPT_EJ200->AddConstProperty("SCINTILLATIONYIELD1", 1.0);
-  ej200Mat->SetMaterialPropertiesTable(MPT_EJ200);
+  // Diagnostics Homogneous SD
+  // TODO: Diagnostic is currently giving some weird results. Investigate!
+  if (mOpticalDiagnosticsFlag) {
+    G4Sphere *solidDHSD = new G4Sphere("solidDHSD", 0, 0.5 * cm, 0, TMath::Pi() * 2, 0, TMath::Pi());
+    G4LogicalVolume *logicDHSD = new G4LogicalVolume(solidDHSD, ej200Mat, "logicDHSD");
+    G4VPhysicalVolume *physDHSD = new G4PVPlacement(0, G4ThreeVector(0, 0, 0), logicDHSD, "physDHSD", logicEJ200, false, 0, checkOverlaps);
+  }
 
   // XP2020 
   G4Element* elK = nist->FindOrBuildElement("K");
@@ -78,13 +60,12 @@ G4VPhysicalVolume* detConstruction::Construct() {
   G4PVPlacement* physXP2020 = new G4PVPlacement(0, G4ThreeVector(0,0, XP2020PosZNoOffset), logicXP2020, "physXP2020", logicWorld, false, 0, checkOverlaps);
 
 /*
-  // FIXME: keep only for sanity check. Turn off in production mode.
-  // G4MaterialPropertiesTable* MPT_Air = new G4MaterialPropertiesTable();
-  // MPT_Air->AddProperty("RINDEX", photonEnergy, refractiveIndex_Air, 4)->GetSpline();
-  // worldMat->SetMaterialPropertiesTable(MPT_Air);
-  
-  // G4double refractiveIndex_Air[4] = {1.0, 1.0, 1.0, 1.0};
-  // G4double reflectivity_Air_EJ200[4] = {1.0, 1.0, 1.0, 1.0};
+
+  G4double refractiveIndex_Air[4] = {1.0, 1.0, 1.0, 1.0};
+  G4double reflectivity_Air_EJ200[4] = {1.0, 1.0, 1.0, 1.0};
+  G4MaterialPropertiesTable* MPT_Air = new G4MaterialPropertiesTable();
+  MPT_Air->AddProperty("RINDEX", photonEnergy, refractiveIndex_Air, 4)->GetSpline();
+  worldMat->SetMaterialPropertiesTable(MPT_Air);
 
     // Surface Properties of EJ200 and Air
     // Todo: need to make the reflection inside the scintillator container more realistic
@@ -161,13 +142,30 @@ std::pair<std::vector<double>, std::vector<double>> detConstruction::GetPMTQuant
   return std::make_pair(PhotonEnergy, QuantumEfficiency);
 }
 
-/*
-void detConstruction::ConstructSDandField() {
-    // Sensitive Detector
-    G4String sdName = "B1/PMT";
-    sensitiveDet* aPMTSD = new sensitiveDet(sdName);
+G4MaterialPropertiesTable* detConstruction::GetScintillatorBulkProps() {
+  auto ScintOpSpec = this->GetScintillatorOpticalProps("EJ200-EmissionSpec.csv");
+  G4MaterialPropertiesTable* MPT_EJ200 = new G4MaterialPropertiesTable();
+  // TODO: Removed ->GetSpline(); Investigate if we need this smoothing method.
+  MPT_EJ200->AddProperty("RINDEX", std::get<0>(ScintOpSpec), std::get<2>(ScintOpSpec), std::get<0>(ScintOpSpec).size());
+  MPT_EJ200->AddProperty("SCINTILLATIONCOMPONENT1", std::get<0>(ScintOpSpec), std::get<1>(ScintOpSpec), std::get<0>(ScintOpSpec).size());
+  MPT_EJ200->AddConstProperty("SCINTILLATIONYIELD", 100. / MeV); // TODO: back to 10000 in production mode.
+  MPT_EJ200->AddConstProperty("RESOLUTIONSCALE", 1.0);
+  MPT_EJ200->AddConstProperty("SCINTILLATIONTIMECONSTANT1", 2.1 * ns);
+  MPT_EJ200->AddConstProperty("SCINTILLATIONRISETIME1", 0.9 * ns);
+  MPT_EJ200->AddConstProperty("SCINTILLATIONYIELD1", 1.0);
 
-    G4SDManager::GetSDMpointer()->AddNewDetector(aPMTSD);
-    SetSensitiveDetector("XP2020_LV", aPMTSD);
+  return MPT_EJ200;
 }
-*/
+
+void detConstruction::ConstructSDandField() {
+  if (mOpticalDiagnosticsFlag) {
+    G4String name = "opticalSD";
+    opticalSD *opticalDiagnosticSD = new opticalSD(name);
+    G4SDManager::GetSDMpointer()->AddNewDetector(opticalDiagnosticSD);
+    SetSensitiveDetector("logicDHSD", opticalDiagnosticSD);
+  }
+}
+
+void detConstruction::SetOpticalDiagnostic(bool flag) {
+  mOpticalDiagnosticsFlag = flag;
+}

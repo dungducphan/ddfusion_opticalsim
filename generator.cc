@@ -7,7 +7,7 @@ generator::generator() {
   G4ParticleDefinition *particle = G4ParticleTable::GetParticleTable()->FindParticle("neutron");
 
   sps->SetParticleDefinition(particle);
-  sps->SetNumberOfParticles(100);
+  sps->SetNumberOfParticles(10); // TODO: lower intensity for testing. Get 10000/shot in production.
 
   sps->GetPosDist()->SetPosDisType("Point"); // Point, Beam, Plane, Surface, Volume
   sps->GetPosDist()->SetCentreCoords(G4ThreeVector(0., 0., -2. * m));
@@ -17,7 +17,7 @@ generator::generator() {
   sps->GetAngDist()->DefineAngRefAxes("angref1", G4ThreeVector(1, 0, 0));
   sps->GetAngDist()->DefineAngRefAxes("angref2", G4ThreeVector(1, 1, 0));
 
-  sps->GetAngDist()->SetMinTheta((TMath::Pi() - 0.01) * rad);
+  sps->GetAngDist()->SetMinTheta((TMath::Pi() - 0.001) * rad); // TODO: Get wider beam in production.
   sps->GetAngDist()->SetMaxTheta(TMath::Pi() * rad);
   sps->GetAngDist()->SetMinPhi(0 * rad);
   sps->GetAngDist()->SetMaxPhi(TMath::Pi() * 2. * rad);
