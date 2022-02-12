@@ -60,7 +60,6 @@ G4VPhysicalVolume* detConstruction::Construct() {
   G4PVPlacement* physXP2020 = new G4PVPlacement(0, G4ThreeVector(0,0, XP2020PosZNoOffset), logicXP2020, "physXP2020", logicWorld, false, 0, checkOverlaps);
 
 /*
-
   G4double refractiveIndex_Air[4] = {1.0, 1.0, 1.0, 1.0};
   G4double reflectivity_Air_EJ200[4] = {1.0, 1.0, 1.0, 1.0};
   G4MaterialPropertiesTable* MPT_Air = new G4MaterialPropertiesTable();
@@ -148,7 +147,7 @@ G4MaterialPropertiesTable* detConstruction::GetScintillatorBulkProps() {
   // TODO: Removed ->GetSpline(); Investigate if we need this smoothing method.
   MPT_EJ200->AddProperty("RINDEX", std::get<0>(ScintOpSpec), std::get<2>(ScintOpSpec), std::get<0>(ScintOpSpec).size());
   MPT_EJ200->AddProperty("SCINTILLATIONCOMPONENT1", std::get<0>(ScintOpSpec), std::get<1>(ScintOpSpec), std::get<0>(ScintOpSpec).size());
-  MPT_EJ200->AddConstProperty("SCINTILLATIONYIELD", 100. / MeV); // TODO: back to 10000 in production mode.
+  MPT_EJ200->AddConstProperty("SCINTILLATIONYIELD", 10000. / MeV);
   MPT_EJ200->AddConstProperty("RESOLUTIONSCALE", 1.0);
   MPT_EJ200->AddConstProperty("SCINTILLATIONTIMECONSTANT1", 2.1 * ns);
   MPT_EJ200->AddConstProperty("SCINTILLATIONRISETIME1", 0.9 * ns);
