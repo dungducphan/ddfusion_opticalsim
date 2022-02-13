@@ -32,7 +32,7 @@ G4VPhysicalVolume* detConstruction::Construct() {
   G4Material* ej200Mat = new G4Material("EJ200Mat", 1.0221 * g/cm3, 2);
   ej200Mat->AddElement(elH, 0.084838648);
   ej200Mat->AddElement(elC, 0.915161352);
-  ej200Mat->SetMaterialPropertiesTable(GetScintillatorBulkProps());
+  ej200Mat->SetMaterialPropertiesTable(this->GetScintillatorBulkProps());
 
   G4Tubs* solidEJ200 = new G4Tubs("solidEJ200", 0, 2.51*cm, EJ200HalfThickness * cm, 0, 2*TMath::Pi());
   G4LogicalVolume* logicEJ200 = new G4LogicalVolume(solidEJ200, ej200Mat, "logicEJ200");
@@ -43,7 +43,7 @@ G4VPhysicalVolume* detConstruction::Construct() {
   if (mOpticalDiagnosticsFlag) {
     G4Sphere *solidDHSD = new G4Sphere("solidDHSD", 0, 0.5 * cm, 0, TMath::Pi() * 2, 0, TMath::Pi());
     G4LogicalVolume *logicDHSD = new G4LogicalVolume(solidDHSD, ej200Mat, "logicDHSD");
-    G4VPhysicalVolume *physDHSD = new G4PVPlacement(0, G4ThreeVector(0, 0, 0), logicDHSD, "physDHSD", logicEJ200, false, 0, checkOverlaps);
+    G4VPhysicalVolume *physDHSD = new G4PVPlacement(0, G4ThreeVector(0, 1.5*cm, 0), logicDHSD, "physDHSD", logicEJ200, false, 0, checkOverlaps);
   }
 
   // XP2020 
@@ -111,43 +111,48 @@ G4VPhysicalVolume* detConstruction::Construct() {
   return physWorld;
 }
 
-std::tuple<std::vector<double>, std::vector<double>, std::vector<double>> detConstruction::GetScintillatorOpticalProps(std::string spectrumFile) {
-  std::vector<double> PhotonEnergy;
-  std::vector<double> RelScintillatingAmplitude;
-  std::vector<double> RefractionIndex;
+std::tuple<std::vector<G4double>, std::vector<G4double>, std::vector<G4double>> detConstruction::GetScintillatorOpticalProps(std::string spectrumFile) {
+  std::vector<G4double> PhotonEnergy;
+  std::vector<G4double> RelScintillatingAmplitude;
+  std::vector<G4double> RefractionIndex;
 
   auto df_ej200_emission_Spectrum = ROOT::RDF::MakeCsvDataFrame(spectrumFile.c_str());
   auto gr = df_ej200_emission_Spectrum.Graph("Wavelength_nm", "RelYieldAmp");
+  G4double maxAmp = -1.;
   for (int i = 0; i < gr->GetN(); ++i) {
-    PhotonEnergy.push_back(1239.84193 * eV / gr->GetPointX(i));
-    RelScintillatingAmplitude.push_back(gr->GetPointY(i));
+    G4double ene = 1239.84193 * eV / gr->GetPointX(i);
+    G4double relScintAmp = gr->GetPointY(i) * 1239.84193 / TMath::Power(gr->GetPointX(i), 2.);
+    maxAmp = maxAmp < relScintAmp ? relScintAmp : maxAmp;
+    PhotonEnergy.push_back(ene);
+    RelScintillatingAmplitude.push_back(relScintAmp);
     RefractionIndex.push_back(1.58);
   }
+  for (auto& amp : RelScintillatingAmplitude) amp /= maxAmp;
 
   return std::make_tuple(PhotonEnergy, RelScintillatingAmplitude, RefractionIndex);
 }
 
-std::pair<std::vector<double>, std::vector<double>> detConstruction::GetPMTQuantumEfficiencyFromFile(std::string qeFile) {
-  std::vector<double> PhotonEnergy;
-  std::vector<double> QuantumEfficiency;
+/*
+std::pair<std::vector<G4double>, std::vector<G4double>> detConstruction::GetPMTQuantumEfficiencyFromFile(std::string qeFile) {
+  std::vector<G4double> PhotonEnergy;
+  std::vector<G4double> QuantumEfficiency;
 
   auto df = ROOT::RDF::MakeCsvDataFrame(qeFile.c_str());
   auto gr = df.Graph("Wavelength_nm", "QE");
   for (int i = 0; i < gr->GetN(); ++i) {
-    PhotonEnergy.push_back(1239.84193 * eV / gr->GetPointX(i));
+    PhotonEnergy.push_back(1239.84193 / gr->GetPointX(i));
     QuantumEfficiency.push_back(gr->GetPointY(i));
   }
 
   return std::make_pair(PhotonEnergy, QuantumEfficiency);
 }
-
+*/
 G4MaterialPropertiesTable* detConstruction::GetScintillatorBulkProps() {
   auto ScintOpSpec = this->GetScintillatorOpticalProps("EJ200-EmissionSpec.csv");
-  G4MaterialPropertiesTable* MPT_EJ200 = new G4MaterialPropertiesTable();
-  // TODO: Removed ->GetSpline(); Investigate if we need this smoothing method.
-  MPT_EJ200->AddProperty("RINDEX", std::get<0>(ScintOpSpec), std::get<2>(ScintOpSpec), std::get<0>(ScintOpSpec).size());
-  MPT_EJ200->AddProperty("SCINTILLATIONCOMPONENT1", std::get<0>(ScintOpSpec), std::get<1>(ScintOpSpec), std::get<0>(ScintOpSpec).size());
-  MPT_EJ200->AddConstProperty("SCINTILLATIONYIELD", 10000. / MeV);
+  auto MPT_EJ200 = new G4MaterialPropertiesTable();
+  MPT_EJ200->AddProperty("RINDEX", std::get<0>(ScintOpSpec), std::get<2>(ScintOpSpec), false, true);
+  MPT_EJ200->AddProperty("SCINTILLATIONCOMPONENT1", std::get<0>(ScintOpSpec), std::get<1>(ScintOpSpec), false, true);
+  MPT_EJ200->AddConstProperty("SCINTILLATIONYIELD", 10. / MeV); // TODO: 10000
   MPT_EJ200->AddConstProperty("RESOLUTIONSCALE", 1.0);
   MPT_EJ200->AddConstProperty("SCINTILLATIONTIMECONSTANT1", 2.1 * ns);
   MPT_EJ200->AddConstProperty("SCINTILLATIONRISETIME1", 0.9 * ns);
