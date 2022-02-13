@@ -42,8 +42,8 @@ class detConstruction : public G4VUserDetectorConstruction {
   private:
     bool mOpticalDiagnosticsFlag;
 
-    std::tuple<std::vector<double>, std::vector<double>, std::vector<double>> GetScintillatorOpticalProps(std::string spectrumFile);
-    std::pair<std::vector<double>, std::vector<double>> GetPMTQuantumEfficiencyFromFile(std::string qeFile);
+    std::tuple<std::vector<G4double>, std::vector<G4double>, std::vector<G4double>> GetScintillatorOpticalProps(std::string spectrumFile);
+    std::pair<std::vector<G4double>, std::vector<G4double>> GetPMTQuantumEfficiencyFromFile(std::string qeFile);
 
     G4MaterialPropertiesTable* GetScintillatorBulkProps();
     // G4MaterialPropertiesTable* GetScintillatorSkinProps();
