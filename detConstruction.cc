@@ -15,10 +15,12 @@ G4VPhysicalVolume* detConstruction::Construct() {
   G4double world_sizeXY = 0.3*m;
   G4double world_sizeZ  = 5*m;
   G4Material* worldMat = nist->FindOrBuildMaterial("G4_Galactic");
+  worldMat->SetMaterialPropertiesTable(this->GetWorldBulkProps());
 
   G4Box* solidWorld = new G4Box("solidWorld", 0.5*world_sizeXY, 0.5*world_sizeXY, 0.5*world_sizeZ);
   G4LogicalVolume* logicWorld = new G4LogicalVolume(solidWorld, worldMat, "logicWorld");
   G4VPhysicalVolume* physWorld = new G4PVPlacement(0, G4ThreeVector(), logicWorld, "World_PV", 0, false, 0, checkOverlaps);        
+
 
   // Detector Geometry Parameters
   G4double EJ200HalfThickness = 1;
@@ -39,7 +41,7 @@ G4VPhysicalVolume* detConstruction::Construct() {
   G4VPhysicalVolume* physEJ200 = new G4PVPlacement(0, G4ThreeVector(0,0, (EJ200PosZ / 2.) * m), logicEJ200, "physEJ200", logicWorld, false, 0, checkOverlaps);
 
   // Diagnostics Homogneous SD
-  // TODO: Diagnostic is currently giving some weird results. Investigate!
+  // TODO: Investigate why all the scintillation photons are of the same energy. The energy distribution should follow the emission spectrum of the EJ-200 scintillator.
   if (mOpticalDiagnosticsFlag) {
     G4Sphere *solidDHSD = new G4Sphere("solidDHSD", 0, 0.5 * cm, 0, TMath::Pi() * 2, 0, TMath::Pi());
     G4LogicalVolume *logicDHSD = new G4LogicalVolume(solidDHSD, ej200Mat, "logicDHSD");
@@ -60,11 +62,6 @@ G4VPhysicalVolume* detConstruction::Construct() {
   G4PVPlacement* physXP2020 = new G4PVPlacement(0, G4ThreeVector(0,0, XP2020PosZNoOffset), logicXP2020, "physXP2020", logicWorld, false, 0, checkOverlaps);
 
 /*
-  G4double refractiveIndex_Air[4] = {1.0, 1.0, 1.0, 1.0};
-  G4double reflectivity_Air_EJ200[4] = {1.0, 1.0, 1.0, 1.0};
-  G4MaterialPropertiesTable* MPT_Air = new G4MaterialPropertiesTable();
-  MPT_Air->AddProperty("RINDEX", photonEnergy, refractiveIndex_Air, 4)->GetSpline();
-  worldMat->SetMaterialPropertiesTable(MPT_Air);
 
     // Surface Properties of EJ200 and Air
     // Todo: need to make the reflection inside the scintillator container more realistic
@@ -159,6 +156,15 @@ G4MaterialPropertiesTable* detConstruction::GetScintillatorBulkProps() {
   MPT_EJ200->AddConstProperty("SCINTILLATIONYIELD1", 1.0);
 
   return MPT_EJ200;
+}
+
+G4MaterialPropertiesTable* detConstruction::GetWorldBulkProps() {
+  G4double photonEnergy[4] = {1E-2*eV, 1 * eV, 10 * eV, 100 * eV};
+  G4double refractiveIndex_Air[4] = {1.0, 1.0, 1.0, 1.0};
+  G4MaterialPropertiesTable* MPT_Air = new G4MaterialPropertiesTable();
+  MPT_Air->AddProperty("RINDEX", photonEnergy, refractiveIndex_Air, false, true);
+
+  return MPT_Air;
 }
 
 void detConstruction::ConstructSDandField() {

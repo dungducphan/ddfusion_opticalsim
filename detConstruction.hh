@@ -46,6 +46,7 @@ class detConstruction : public G4VUserDetectorConstruction {
     std::pair<std::vector<G4double>, std::vector<G4double>> GetPMTQuantumEfficiencyFromFile(std::string qeFile);
 
     G4MaterialPropertiesTable* GetScintillatorBulkProps();
+    G4MaterialPropertiesTable* GetWorldBulkProps();
     // G4MaterialPropertiesTable* GetScintillatorSkinProps();
     // G4MaterialPropertiesTable* GetPhotoCathodeBulkProps();
     // G4MaterialPropertiesTable* GetPhotoCathodeSkinProps();
