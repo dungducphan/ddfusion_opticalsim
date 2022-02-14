@@ -1,5 +1,6 @@
 #include "detConstruction.hh"
 #include "sensitiveDet.hh"
+#include <fstream>
 
 detConstruction::detConstruction() : G4VUserDetectorConstruction(), mOpticalDiagnosticsFlag(false) {}
 
@@ -113,12 +114,14 @@ std::tuple<std::vector<G4double>, std::vector<G4double>, std::vector<G4double>> 
   std::vector<G4double> RelScintillatingAmplitude;
   std::vector<G4double> RefractionIndex;
 
-  auto df_ej200_emission_Spectrum = ROOT::RDF::MakeCsvDataFrame(spectrumFile.c_str());
-  auto gr = df_ej200_emission_Spectrum.Graph("Wavelength_nm", "RelYieldAmp");
+  std::ifstream indata(spectrumFile.c_str());
+
   G4double maxAmp = -1.;
-  for (int i = 0; i < gr->GetN(); ++i) {
-    G4double ene = 1239.84193 * eV / gr->GetPointX(i);
-    G4double relScintAmp = gr->GetPointY(i) * 1239.84193 / TMath::Power(gr->GetPointX(i), 2.);
+  double tmp_wavelength;
+  double tmp_relAmp;
+  while (indata >> tmp_wavelength >> tmp_relAmp) {
+    G4double ene = 1239.84193 * eV / tmp_wavelength;
+    G4double relScintAmp = tmp_relAmp; // * 1239.84193 / TMath::Power(tmp_wavelength, 2.); // TODO: check if Jacobian is needed here.
     maxAmp = maxAmp < relScintAmp ? relScintAmp : maxAmp;
     PhotonEnergy.push_back(ene);
     RelScintillatingAmplitude.push_back(relScintAmp);
