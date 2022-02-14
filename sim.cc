@@ -3,11 +3,11 @@
 #include "actionInit.hh"
 
 #include "QGSP_BERT_HP.hh"
+#include "G4EmStandardPhysics_option4.hh"
 #include "G4OpticalPhysics.hh"
 #include "G4RunManagerFactory.hh"
 #include "G4SteppingVerbose.hh"
 #include "G4UImanager.hh"
-#include "QBBC.hh"
 #include "G4VisExecutive.hh"
 #include "G4UIExecutive.hh"
 
@@ -25,7 +25,16 @@ int main(int argc,char** argv) {
   runManager->SetUserInitialization(detModel);
   
   G4VModularPhysicsList* physicsList = new QGSP_BERT_HP();
-  physicsList->RegisterPhysics(new G4OpticalPhysics());
+  physicsList->RegisterPhysics(new G4EmStandardPhysics_option4());
+  G4OpticalPhysics* opticalPhysics = new G4OpticalPhysics();
+  auto opticalParams= G4OpticalParameters::Instance();
+  opticalParams->SetWLSTimeProfile("delta");
+  opticalParams->SetScintTrackSecondariesFirst(true);
+  opticalParams->SetCerenkovMaxPhotonsPerStep(100);
+  opticalParams->SetCerenkovMaxBetaChange(10.0);
+  opticalParams->SetCerenkovTrackSecondariesFirst(true);
+  physicsList->RegisterPhysics(opticalPhysics);
+
   runManager->SetUserInitialization(physicsList);
 
   runManager->SetUserInitialization(new actionInit());
