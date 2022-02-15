@@ -12,7 +12,7 @@ file(GLOB sources ${PROJECT_SOURCE_DIR}/*.cc)
 file(GLOB headers ${PROJECT_SOURCE_DIR}/*.hh)
 
 file(GLOB MACROS "*.mac")
-file(GLOB EXT_DATA "*.csv")
+file(GLOB EXT_DATA "*.csv" "*.root")
 
 file(COPY ${MACROS} DESTINATION ${PROJECT_BINARY_DIR})
 file(COPY ${EXT_DATA} DESTINATION ${PROJECT_BINARY_DIR})

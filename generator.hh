@@ -13,6 +13,8 @@
 #include "G4String.hh"
 
 #include "TMath.h"
+#include "TH1D.h"
+#include "TFile.h"
 
 class generator : public G4VUserPrimaryGeneratorAction {
 public:
@@ -20,6 +22,7 @@ public:
   ~generator() override;
 
   void GeneratePrimaries(G4Event* anEvent) override;
+  void GetEnergySpectrum(G4SingleParticleSource* sps);
 
 private:
   G4GeneralParticleSource *fGeneralParticleSource = nullptr;
