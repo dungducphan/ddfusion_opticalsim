@@ -1,13 +1,16 @@
 #include "actionInit.hh"
 
-actionInit::actionInit() : G4VUserActionInitialization() {}
+actionInit::actionInit(TH1D* hIn) : G4VUserActionInitialization() {
+  fNeutronSpectrum = hIn;
+}
 
-actionInit::~actionInit() {}
+actionInit::~actionInit() {
+}
 
 void actionInit::BuildForMaster() const {
   SetUserAction(new runAction());
 }
 void actionInit::Build() const {
   SetUserAction(new runAction());
-  SetUserAction(new generator());
+  SetUserAction(new generator(fNeutronSpectrum));
 }

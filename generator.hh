@@ -14,11 +14,10 @@
 
 #include "TMath.h"
 #include "TH1D.h"
-#include "TFile.h"
 
 class generator : public G4VUserPrimaryGeneratorAction {
 public:
-  generator();
+  generator(TH1D*);
   ~generator() override;
 
   void GeneratePrimaries(G4Event* anEvent) override;
@@ -26,4 +25,5 @@ public:
 
 private:
   G4GeneralParticleSource *fGeneralParticleSource = nullptr;
+  TH1D* fNeutronSpectrum;
 };

@@ -127,7 +127,7 @@ G4MaterialPropertiesTable* detConstruction::GetScintillatorBulkProps() {
 
   MPT_EJ200->AddProperty("RINDEX", photonEnergy, rIndex, N, false, true);
   MPT_EJ200->AddProperty("SCINTILLATIONCOMPONENT1", photonEnergy, relAmp, N, false, true);
-  MPT_EJ200->AddConstProperty("SCINTILLATIONYIELD", 10000. / MeV);
+  MPT_EJ200->AddConstProperty("SCINTILLATIONYIELD", 100. / MeV);
   MPT_EJ200->AddConstProperty("RESOLUTIONSCALE", 1.0);
   MPT_EJ200->AddConstProperty("SCINTILLATIONTIMECONSTANT1", 2.1 * ns);
   MPT_EJ200->AddConstProperty("SCINTILLATIONRISETIME1", 0.9 * ns);

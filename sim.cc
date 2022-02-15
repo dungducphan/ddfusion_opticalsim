@@ -17,6 +17,9 @@
 #include "G4VisExecutive.hh"
 #include "G4UIExecutive.hh"
 
+#include "TH1D.h"
+#include "TFile.h"
+
 int main(int argc,char** argv) {
   G4UIExecutive* ui = nullptr;
   if ( argc == 1 ) { ui = new G4UIExecutive(argc, argv); }
@@ -47,7 +50,9 @@ int main(int argc,char** argv) {
 
   runManager->SetUserInitialization(physicsList);
 
-  runManager->SetUserInitialization(new actionInit());
+  TFile* indata = new TFile("nSpec.root", "READ");
+  TH1D* hEne = (TH1D*) indata->Get("NeutronSpectrum");
+  runManager->SetUserInitialization(new actionInit(hEne));
 
   G4VisManager* visManager = new G4VisExecutive;
   visManager->Initialize();
@@ -63,6 +68,10 @@ int main(int argc,char** argv) {
     ui->SessionStart();
     delete ui;
   }
+
+  delete hEne;
+  indata->Close();
+  delete indata;
 
   delete visManager;
   delete runManager;
