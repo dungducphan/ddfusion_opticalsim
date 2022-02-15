@@ -39,7 +39,12 @@ void generator::GetEnergySpectrum(G4SingleParticleSource* sps) {
   G4double maxBinContent = fNeutronSpectrum->GetMaximum();
   for (int i = 1; i < fNeutronSpectrum->GetSize() - 1; ++i) {
     G4double ene = fNeutronSpectrum->GetBinCenter(i) * MeV;
-    G4double val = fNeutronSpectrum->GetBinContent(i) * 1023. / maxBinContent;
+    G4double val = 0;
+    if (ene > 2.7 * MeV) {
+      val = fNeutronSpectrum->GetBinContent(i) * 512. / maxBinContent;
+    } else {
+      val = fNeutronSpectrum->GetBinContent(i) * 1023. / maxBinContent;
+    }
     G4ThreeVector binData(ene, val, 0);
     sps->GetEneDist()->UserEnergyHisto(binData);
   }
