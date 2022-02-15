@@ -18,7 +18,7 @@ generator::generator(TH1D* hEne) {
   sps->GetAngDist()->DefineAngRefAxes("angref1", G4ThreeVector(1, 0, 0));
   sps->GetAngDist()->DefineAngRefAxes("angref2", G4ThreeVector(1, 1, 0));
 
-  sps->GetAngDist()->SetMinTheta((TMath::Pi() - 0.001) * rad);
+  sps->GetAngDist()->SetMinTheta((TMath::Pi() - 0.008) * rad);
   sps->GetAngDist()->SetMaxTheta(TMath::Pi() * rad);
   sps->GetAngDist()->SetMinPhi(0 * rad);
   sps->GetAngDist()->SetMaxPhi(TMath::Pi() * 2. * rad);
