@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.17 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.16 FATAL_ERROR)
 
 project(ddfusion_opticalsim)
 
@@ -20,5 +20,3 @@ file(COPY ${EXT_DATA} DESTINATION ${PROJECT_BINARY_DIR})
 add_executable(ddopt sim.cc ${sources} ${headers})
 target_link_libraries(ddopt ${Geant4_LIBRARIES})
 target_link_libraries(ddopt ${ROOT_LIBRARIES})
-
-add_custom_target(ddfusion_opticalsim DEPENDS ddopt)
