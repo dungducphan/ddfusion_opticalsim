@@ -11,7 +11,7 @@ generator::generator(TH1D* hEne) {
   sps->SetNumberOfParticles(10000);
 
   sps->GetPosDist()->SetPosDisType("Point"); // Point, Beam, Plane, Surface, Volume
-  sps->GetPosDist()->SetCentreCoords(G4ThreeVector(0., 0., -2. * m));
+  sps->GetPosDist()->SetCentreCoords(G4ThreeVector(0., 0., - (4.5 / 2.) * m));
   sps->GetPosDist()->ConfineSourceToVolume("NULL");
 
   sps->GetAngDist()->SetAngDistType( "iso"); // Isotropic, Cosine-law, Beam, User-defined
