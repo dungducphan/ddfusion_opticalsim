@@ -1,5 +1,4 @@
 #include "detConstruction.hh"
-#include "sensitiveDet.hh"
 #include <fstream>
 
 detConstruction::detConstruction() : G4VUserDetectorConstruction(), mOpticalDiagnosticsFlag(false) {}
@@ -16,12 +15,11 @@ G4VPhysicalVolume* detConstruction::Construct() {
   G4double world_sizeXY = 0.3*m;
   G4double world_sizeZ  = 5*m;
   G4Material* worldMat = nist->FindOrBuildMaterial("G4_Galactic");
-  worldMat->SetMaterialPropertiesTable(this->GetWorldBulkProps());
+  // worldMat->SetMaterialPropertiesTable(this->GetWorldBulkProps());
 
   G4Box* solidWorld = new G4Box("solidWorld", 0.5*world_sizeXY, 0.5*world_sizeXY, 0.5*world_sizeZ);
   G4LogicalVolume* logicWorld = new G4LogicalVolume(solidWorld, worldMat, "logicWorld");
   G4VPhysicalVolume* physWorld = new G4PVPlacement(0, G4ThreeVector(), logicWorld, "World_PV", 0, false, 0, checkOverlaps);        
-
 
   // Detector Geometry Parameters
   G4double EJ200HalfThickness = 1;
@@ -40,13 +38,13 @@ G4VPhysicalVolume* detConstruction::Construct() {
   G4Tubs* solidEJ200 = new G4Tubs("solidEJ200", 0, 2.51*cm, EJ200HalfThickness * cm, 0, 2*TMath::Pi());
   G4LogicalVolume* logicEJ200 = new G4LogicalVolume(solidEJ200, ej200Mat, "logicEJ200");
   G4VPhysicalVolume* physEJ200 = new G4PVPlacement(0, G4ThreeVector(0,0, (EJ200PosZ / 2.) * m), logicEJ200, "physEJ200", logicWorld, false, 0, checkOverlaps);
+  new G4LogicalSkinSurface("logicOpSkin_EJ200", logicEJ200, this->GetScintillatorSkinProps());
 
   // Diagnostics Homogneous SD
-  // TODO: Investigate why all the scintillation photons are of the same energy. The energy distribution should follow the emission spectrum of the EJ-200 scintillator.
   if (mOpticalDiagnosticsFlag) {
     G4Sphere *solidDHSD = new G4Sphere("solidDHSD", 0, 0.5 * cm, 0, TMath::Pi() * 2, 0, TMath::Pi());
     G4LogicalVolume *logicDHSD = new G4LogicalVolume(solidDHSD, ej200Mat, "logicDHSD");
-    G4VPhysicalVolume *physDHSD = new G4PVPlacement(0, G4ThreeVector(0, 1.5*cm, 0), logicDHSD, "physDHSD", logicEJ200, false, 0, checkOverlaps);
+    new G4PVPlacement(0, G4ThreeVector(0, 1.5*cm, 0), logicDHSD, "physDHSD", logicEJ200, false, 0, checkOverlaps);
   }
 
   // XP2020 
@@ -61,50 +59,7 @@ G4VPhysicalVolume* detConstruction::Construct() {
   G4Tubs* solidXP2020 = new G4Tubs("solidXP2020", 0, 2.51*cm, XP2020HalfThickness * mm, 0, 2*TMath::Pi());
   G4LogicalVolume* logicXP2020 = new G4LogicalVolume(solidXP2020, biAlkaliMat, "logicXP2020");
   G4PVPlacement* physXP2020 = new G4PVPlacement(0, G4ThreeVector(0,0, XP2020PosZNoOffset), logicXP2020, "physXP2020", logicWorld, false, 0, checkOverlaps);
-
-/*
-
-    // Surface Properties of EJ200 and Air
-    // Todo: need to make the reflection inside the scintillator container more realistic
-    G4MaterialPropertiesTable* MPT_opSurf_Air_EJ200 = new G4MaterialPropertiesTable();
-    MPT_opSurf_Air_EJ200->AddProperty("REFLECTIVITY", photonEnergy, reflectivity_Air_EJ200, 4)->GetSpline();
-    G4OpticalSurface* opSurf_Air_EJ200 = new G4OpticalSurface("Air_EJ200");
-    opSurf_Air_EJ200->SetType(dielectric_metal);
-    opSurf_Air_EJ200->SetFinish(polishedtioair);
-    opSurf_Air_EJ200->SetModel(unified);
-    opSurf_Air_EJ200->SetMaterialPropertiesTable(MPT_opSurf_Air_EJ200);
-
-    GetPMTQuantumQEFromFile("XP2020_QE.csv");
-    // Todo: check the validity of these properties for the bi-alkali material of XP-2020 PMT
-    std::vector<G4double> ephoton           = { 7.0 * eV, 7.14 * eV };
-    std::vector<G4double> photocath_ReR     = { 1.92, 1.92 };
-    std::vector<G4double> photocath_ImR     = { 1.69, 1.69 };
-    G4MaterialPropertiesTable *MPT_XP2020 = new G4MaterialPropertiesTable();
-    MPT_XP2020->AddProperty("EFFICIENCY", fPhotonEnergy_XP2020, fQE_XP2020,fPhotonEnergy_XP2020.size())->GetSpline();
-    MPT_XP2020->AddProperty("REALRINDEX", ephoton, photocath_ReR);
-    MPT_XP2020->AddProperty("IMAGINARYRINDEX", ephoton, photocath_ImR);
-    
-    // Surface Properties of EJ200 and PMT
-    G4OpticalSurface* opSurf_EJ200_XP2020 = new G4OpticalSurface("EJ200_XP2020");
-    opSurf_EJ200_XP2020->SetType(dielectric_dielectric);
-    opSurf_EJ200_XP2020->SetFinish(polished);
-    opSurf_EJ200_XP2020->SetModel(unified);
-    opSurf_EJ200_XP2020->SetMaterialPropertiesTable(MPT_XP2020);
-    
-    // Surface Properties of EJ200 and PMT
-    G4OpticalSurface* opSurf_Air_XP2020 = new G4OpticalSurface("EJ200_XP2020");
-    opSurf_Air_XP2020->SetType(dielectric_dielectric);
-    opSurf_Air_XP2020->SetFinish(polished);
-    opSurf_Air_XP2020->SetModel(unified);
-    opSurf_Air_XP2020->SetMaterialPropertiesTable(MPT_XP2020);
-
-    // Surface properties applied
-
-    // new G4LogicalBorderSurface("Air_EJ200", physEJ200, physWorld, opSurf_Air_EJ200);
-    new G4LogicalBorderSurface("EJ200_XP2020", physEJ200, physXP2020, opSurf_EJ200_XP2020);
-    // new G4LogicalSkinSurface("logicalSurf_XP2020", logicXP2020, opSurf_EJ200_XP2020);
-    new G4LogicalSkinSurface("logicalSurf_EJ200", logicEJ200, opSurf_Air_EJ200);
-*/
+  new G4LogicalBorderSurface("logicOpSkin_XP2020", physEJ200, physXP2020, this->GetPhotoCathodeScintillatorBoundaryProps());
 
   return physWorld;
 }
@@ -127,32 +82,52 @@ std::tuple<std::vector<G4double>, std::vector<G4double>, std::vector<G4double>> 
     RelScintillatingAmplitude.push_back(relScintAmp);
     RefractionIndex.push_back(1.58);
   }
+  indata.close();
+
   for (auto& amp : RelScintillatingAmplitude) amp /= maxAmp;
 
   return std::make_tuple(PhotonEnergy, RelScintillatingAmplitude, RefractionIndex);
 }
 
-/*
-std::pair<std::vector<G4double>, std::vector<G4double>> detConstruction::GetPMTQuantumEfficiencyFromFile(std::string qeFile) {
+std::tuple<std::vector<G4double>, std::vector<G4double>, std::vector<G4double>, std::vector<G4double>> detConstruction::GetPMTQuantumEfficiencyFromFile(std::string qeFile) {
   std::vector<G4double> PhotonEnergy;
   std::vector<G4double> QuantumEfficiency;
+  std::vector<G4double> PhotoCathodeReR;
+  std::vector<G4double> PhotoCathodeImR;
 
-  auto df = ROOT::RDF::MakeCsvDataFrame(qeFile.c_str());
-  auto gr = df.Graph("Wavelength_nm", "QE");
-  for (int i = 0; i < gr->GetN(); ++i) {
-    PhotonEnergy.push_back(1239.84193 / gr->GetPointX(i));
-    QuantumEfficiency.push_back(gr->GetPointY(i));
+  std::ifstream indata(qeFile.c_str());
+  G4double tmp_wavelength;
+  G4double tmp_qe;
+  while (indata >> tmp_wavelength >> tmp_qe) {
+    PhotonEnergy.push_back(1239.84193 * eV / tmp_wavelength);
+    QuantumEfficiency.push_back(tmp_qe / 100.);
+    PhotoCathodeReR.push_back(1.92);
+    PhotoCathodeImR.push_back(1.69);
   }
 
-  return std::make_pair(PhotonEnergy, QuantumEfficiency);
+  return std::make_tuple(PhotonEnergy, QuantumEfficiency, PhotoCathodeReR, PhotoCathodeImR);
 }
-*/
+
 G4MaterialPropertiesTable* detConstruction::GetScintillatorBulkProps() {
   auto ScintOpSpec = this->GetScintillatorOpticalProps("EJ200-EmissionSpec.csv");
   auto MPT_EJ200 = new G4MaterialPropertiesTable();
-  MPT_EJ200->AddProperty("RINDEX", std::get<0>(ScintOpSpec), std::get<2>(ScintOpSpec), false, true);
-  MPT_EJ200->AddProperty("SCINTILLATIONCOMPONENT1", std::get<0>(ScintOpSpec), std::get<1>(ScintOpSpec), false, true);
-  MPT_EJ200->AddConstProperty("SCINTILLATIONYIELD", 10. / MeV); // TODO: 10000
+
+  int N = std::get<0>(ScintOpSpec).size();
+
+  auto photonEnergy = new G4double[N];
+  auto relAmp = new G4double[N];
+  auto rIndex = new G4double[N];
+
+  for (int i = 0; i < N; ++i) {
+    photonEnergy[i] = std::get<0>(ScintOpSpec).at(N - 1 - i);
+    rIndex[i] = std::get<2>(ScintOpSpec).at(N - 1 - i);
+    relAmp[i] = std::get<1>(ScintOpSpec).at(N - 1 - i);
+    G4cout << photonEnergy[i] / eV << " :: " << relAmp[i] << G4endl;
+  }
+
+  MPT_EJ200->AddProperty("RINDEX", photonEnergy, rIndex, N, false, true);
+  MPT_EJ200->AddProperty("SCINTILLATIONCOMPONENT1", photonEnergy, relAmp, N, false, true);
+  MPT_EJ200->AddConstProperty("SCINTILLATIONYIELD", 10000. / MeV);
   MPT_EJ200->AddConstProperty("RESOLUTIONSCALE", 1.0);
   MPT_EJ200->AddConstProperty("SCINTILLATIONTIMECONSTANT1", 2.1 * ns);
   MPT_EJ200->AddConstProperty("SCINTILLATIONRISETIME1", 0.9 * ns);
@@ -162,10 +137,10 @@ G4MaterialPropertiesTable* detConstruction::GetScintillatorBulkProps() {
 }
 
 G4MaterialPropertiesTable* detConstruction::GetWorldBulkProps() {
-  G4double photonEnergy[4] = {1E-2*eV, 1 * eV, 10 * eV, 100 * eV};
+  G4double photonEnergy[4] = {1E-2*eV, 0.1 * eV, 1 * eV, 10 * eV};
   G4double refractiveIndex_Air[4] = {1.0, 1.0, 1.0, 1.0};
   G4MaterialPropertiesTable* MPT_Air = new G4MaterialPropertiesTable();
-  MPT_Air->AddProperty("RINDEX", photonEnergy, refractiveIndex_Air, false, true);
+  MPT_Air->AddProperty("RINDEX", photonEnergy, refractiveIndex_Air, 4)->GetSpline();
 
   return MPT_Air;
 }
@@ -177,8 +152,44 @@ void detConstruction::ConstructSDandField() {
     G4SDManager::GetSDMpointer()->AddNewDetector(opticalDiagnosticSD);
     SetSensitiveDetector("logicDHSD", opticalDiagnosticSD);
   }
+
+  G4String name = "pmtSD";
+  opticalSD *pmtSD = new opticalSD(name);
+  G4SDManager::GetSDMpointer()->AddNewDetector(pmtSD);
+  SetSensitiveDetector("logicXP2020", pmtSD);
 }
 
 void detConstruction::SetOpticalDiagnostic(bool flag) {
   mOpticalDiagnosticsFlag = flag;
 }
+
+G4OpticalSurface* detConstruction::GetScintillatorSkinProps() {
+  G4double photonEnergy[2] = {0.1 * eV, 100 * eV};
+  G4double reflectivity[2] = {1, 1};
+  G4MaterialPropertiesTable* MPT_opSurf_EJ200 = new G4MaterialPropertiesTable();
+  MPT_opSurf_EJ200->AddProperty("REFLECTIVITY", photonEnergy, reflectivity, 2)->GetSpline();
+  G4OpticalSurface* opSurf_EJ200 = new G4OpticalSurface("OpSkin_EJ200");
+  opSurf_EJ200->SetType(dielectric_metal);
+  opSurf_EJ200->SetFinish(polished);
+  opSurf_EJ200->SetModel(glisur);
+  opSurf_EJ200->SetMaterialPropertiesTable(MPT_opSurf_EJ200);
+
+  return opSurf_EJ200;
+}
+
+G4OpticalSurface *detConstruction::GetPhotoCathodeScintillatorBoundaryProps() {
+  G4OpticalSurface* opSurf_XP2020 = new G4OpticalSurface("OpSkin_XP2020");
+  opSurf_XP2020->SetType(dielectric_metal);
+  opSurf_XP2020->SetFinish(polished);
+  opSurf_XP2020->SetModel(glisur);
+
+  auto opSpec = this->GetPMTQuantumEfficiencyFromFile("XP2020_QE.csv");
+  G4MaterialPropertiesTable *MPT_XP2020 = new G4MaterialPropertiesTable();
+  MPT_XP2020->AddProperty("EFFICIENCY", std::get<0>(opSpec), std::get<1>(opSpec));
+  MPT_XP2020->AddProperty("REALRINDEX", std::get<0>(opSpec), std::get<2>(opSpec));
+  MPT_XP2020->AddProperty("IMAGINARYRINDEX", std::get<0>(opSpec), std::get<3>(opSpec));
+  opSurf_XP2020->SetMaterialPropertiesTable(MPT_XP2020);
+
+  return opSurf_XP2020;
+}
+
