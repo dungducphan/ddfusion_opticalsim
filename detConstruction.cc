@@ -61,6 +61,11 @@ G4VPhysicalVolume* detConstruction::Construct() {
   G4PVPlacement* physXP2020 = new G4PVPlacement(0, G4ThreeVector(0,0, XP2020PosZNoOffset), logicXP2020, "physXP2020", logicWorld, false, 0, checkOverlaps);
   new G4LogicalBorderSurface("logicOpSkin_XP2020", physEJ200, physXP2020, this->GetPhotoCathodeScintillatorBoundaryProps());
 
+  G4Material* copper = nist->FindOrBuildMaterial("G4_Cu");
+  G4Box* solidCuShield = new G4Box("solidCuShield", 10. * cm, 10. * cm, 1.5 * cm);
+  G4LogicalVolume* logicCuShield = new G4LogicalVolume(solidCuShield, copper, "logicCuShield");
+  new G4PVPlacement(0, G4ThreeVector(0, 0, (EJ200PosZ / 2. - 0.1) * m), logicCuShield, "physCuShield", logicWorld, false, 0, checkOverlaps);
+
   return physWorld;
 }
 
